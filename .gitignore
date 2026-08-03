@@ -10,3 +10,13 @@ __pycache__/
 
 # (Optional) Ignore local text database if you want a clean start on GitHub
 # complaints.txt
+# Ignore local databases & Flask instance folder
+instance/
+*.db
+*.sqlite3
+
+# Ignore VS Code settings
+.vscode/
+
+# Ignore legacy txt files (optional)
+complaints.txt
