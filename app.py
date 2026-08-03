@@ -1,28 +1,36 @@
 import os
 import platform
 import subprocess
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, session, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
-from flask import Flask
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 app = Flask(__name__)
 
-# Set secure session cookies
+# ---------------------------------------------------------------------------
+# 1. SECURITY & CONFIGURATION
+# ---------------------------------------------------------------------------
+# Fetch secret key and admin credentials from environment variables (with local fallbacks)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-dev-key')
+ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')       # Default local username: admin
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', '1234')        # Default local password: 1234
+
+# Session Cookie Security Settings
 app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevents client-side JS from stealing session cookies
 app.config['SESSION_COOKIE_SECURE'] = True    # Enforces HTTPS-only cookies
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' # Helps mitigate CSRF attacks
 
-# Setup Rate Limiter
+# Setup Rate Limiter to prevent brute-force attacks
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["200 per day", "50 per hour"] # Global limit for all routes
 )
 
-# Configure Database URL
+# ---------------------------------------------------------------------------
+# 2. DATABASE CONFIGURATION (PostgreSQL / SQLite)
+# ---------------------------------------------------------------------------
 # Uses Render PostgreSQL URL in production, or local SQLite database in development
 db_url = os.environ.get("DATABASE_URL", "sqlite:///complaints.db")
 if db_url and db_url.startswith("postgres://"):
@@ -34,7 +42,6 @@ app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
-
 
 # Define Database Model
 class ComplaintModel(db.Model):
@@ -59,34 +66,43 @@ class ComplaintModel(db.Model):
             "team": self.assigned_team,
         }
 
-
-# Initialize tables
+# Initialize database tables
 with app.app_context():
     db.create_all()
-
 
 # Helper function to validate phone (7-15 numeric digits)
 def is_valid_phone(phone):
     return phone.isdigit() and (7 <= len(phone) <= 15)
 
 
-# --- ROUTES ---
-
+# ---------------------------------------------------------------------------
+# 3. PAGE ROUTES
+# ---------------------------------------------------------------------------
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
-# Apply a strict limit specifically on your admin login route
+# Rate limit: Max 5 attempts per minute to prevent brute-forcing admin page
 @limiter.limit("5 per minute")
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_page():
     return render_template("admin.html")
 
+
+# ---------------------------------------------------------------------------
+# 4. API ROUTES
+# ---------------------------------------------------------------------------
+
 @app.route("/api/login", methods=["POST"])
+@limiter.limit("5 per minute")  # Protect API login endpoint against brute force
 def login():
-    data = request.json
-    if data.get("username") == "admin" and data.get("password") == "1234":
+    data = request.json or {}
+    username = data.get("username")
+    password = data.get("password")
+    
+    # Check credentials against environment variables (ADMIN_USERNAME & ADMIN_PASSWORD)
+    if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
         return jsonify({"status": "success"})
     return jsonify({"status": "error", "message": "Invalid credentials"}), 401
 
@@ -107,7 +123,7 @@ def get_single_complaint(cid):
 
 @app.route("/api/complaints", methods=["POST"])
 def create_complaint():
-    data = request.json
+    data = request.json or {}
     phone = data.get("phone", "")
 
     if not is_valid_phone(phone):
@@ -142,7 +158,7 @@ def update_complaint(cid):
     if not complaint:
         return jsonify({"status": "error", "message": "Not found"}), 404
 
-    data = request.json
+    data = request.json or {}
     if "status" in data and data["status"]:
         complaint.status = data["status"]
     if "team" in data and data["team"]:
