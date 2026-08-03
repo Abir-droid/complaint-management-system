@@ -21,9 +21,12 @@
         <!-- Login Form -->
         <div id="loginCard" class="card" style="max-width: 400px; margin: 50px auto;">
             <h2>Admin Login</h2>
-            <input type="text" id="username" placeholder="Username" style="width:100%; margin-bottom:10px; padding:8px;">
-            <input type="password" id="password" placeholder="Password" style="width:100%; margin-bottom:10px; padding:8px;">
-            <button onclick="login()" style="width:100%; background:#007bff; color:white;">Login</button>
+            <!-- Wrapped inputs inside a form to enable Enter key submission -->
+            <form onsubmit="event.preventDefault(); login();">
+                <input type="text" id="username" placeholder="Username" style="width:100%; margin-bottom:10px; padding:8px;" required>
+                <input type="password" id="password" placeholder="Password" style="width:100%; margin-bottom:10px; padding:8px;" required>
+                <button type="submit" style="width:100%; background:#007bff; color:white;">Login</button>
+            </form>
         </div>
 
         <!-- Admin Dashboard -->
