@@ -11,6 +11,16 @@ app = Flask(__name__)
 # ---------------------------------------------------------------------------
 # 1. SECURITY & CONFIGURATION
 # ---------------------------------------------------------------------------
+
+# Helper function to generate a rate limit key based on IP + Username
+def get_login_rate_limit_key():
+    # Grabs the username submitted in JSON or Form data, fallback to 'anonymous'
+    data = request.get_json(silent=True) or request.form
+    username = data.get('username', 'anonymous')
+    
+    # Combines client IP + attempted username (e.g. "192.168.1.1:admin")
+    return f"{get_remote_address()}:{username}"
+
 # Fetch secret key and admin credentials from environment variables (with local fallbacks)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-dev-key')
 ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')       # Default local username: admin
@@ -84,7 +94,8 @@ def index():
     return render_template("index.html")
 
 # Rate limit: Max 5 attempts per minute to prevent brute-forcing admin page
-@limiter.limit("5 per minute")
+# UPDATED: Now uses the custom key_func
+@limiter.limit("5 per minute", key_func=get_login_rate_limit_key)
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_page():
     return render_template("admin.html")
@@ -94,8 +105,9 @@ def admin_page():
 # 4. API ROUTES
 # ---------------------------------------------------------------------------
 
+# UPDATED: Now uses the custom key_func to protect API login endpoint
 @app.route("/api/login", methods=["POST"])
-@limiter.limit("5 per minute")  # Protect API login endpoint against brute force
+@limiter.limit("5 per minute", key_func=get_login_rate_limit_key)  
 def login():
     data = request.json or {}
     username = data.get("username")
