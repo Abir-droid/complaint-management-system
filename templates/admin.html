@@ -74,9 +74,13 @@
                     password: document.getElementById('password').value
                 })
             });
+
             if (res.ok) {
                 sessionStorage.setItem('isLoggedIn', 'true');
                 showDashboard();
+            } else if (res.status === 429) {
+                // HTTP 429 = Too Many Requests (Rate Limiter Triggered!)
+                alert('⚠️ Rate limit exceeded! Too many login attempts. Please wait 1 minute and try again.');
             } else {
                 alert('Invalid Credentials!');
             }
