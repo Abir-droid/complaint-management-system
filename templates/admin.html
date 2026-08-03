@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <style>
+        * { box-sizing: border-box; font-family: sans-serif; }
+        body { margin: 20px; background: #f4f6f9; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        button { cursor: pointer; padding: 6px 12px; border: none; border-radius: 4px; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-success { background: #28a745; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Form -->
+        <div id="loginCard" class="card" style="max-width: 400px; margin: 50px auto;">
+            <h2>Admin Login</h2>
+            <input type="text" id="username" placeholder="Username" style="width:100%; margin-bottom:10px; padding:8px;">
+            <input type="password" id="password" placeholder="Password" style="width:100%; margin-bottom:10px; padding:8px;">
+            <button onclick="login()" style="width:100%; background:#007bff; color:white;">Login</button>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div id="dashboard" class="card" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2>Admin Control Panel</h2>
+                <a href="/"><button style="background:#6c757d; color:white;">User View</button></a>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th><th>Name</th><th>Phone</th><th>Category</th>
+                        <th>Description</th><th>Status</th><th>Team</th><th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="complaintTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function login() {
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value
+                })
+            });
+            if (res.ok) {
+                document.getElementById('loginCard').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                loadAdminComplaints();
+            } else {
+                alert('Invalid Credentials!');
+            }
+        }
+
+        async function loadAdminComplaints() {
+            const res = await fetch('/api/complaints');
+            const data = await res.json();
+            const tbody = document.getElementById('complaintTable');
+            tbody.innerHTML = '';
+            
+            data.forEach(c => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><b>#${c.id}</b></td>
+                        <td>${c.name}</td>
+                        <td>${c.phone}</td>
+                        <td>${c.category}</td>
+                        <td>${c.description}</td>
+                        <td>
+                            <select id="status-${c.id}">
+                                <option ${c.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                                <option ${c.status === 'Assigned' ? 'selected' : ''}>Assigned</option>
+                                <option ${c.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
+                                <option ${c.status === 'Closed' ? 'selected' : ''}>Closed</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="team-${c.id}">
+                                <option ${c.team === 'Not Assigned' ? 'selected' : ''}>Not Assigned</option>
+                                <option ${c.team === 'IT Department' ? 'selected' : ''}>IT Department</option>
+                                <option ${c.team === 'Maintenance' ? 'selected' : ''}>Maintenance</option>
+                                <option ${c.team === 'Security' ? 'selected' : ''}>Security</option>
+                                <option ${c.team === 'Customer Support' ? 'selected' : ''}>Customer Support</option>
+                            </select>
+                        </td>
+                        <td>
+                            <button class="btn-success" onclick="updateRecord(${c.id})">Save</button>
+                            <button class="btn-danger" onclick="deleteRecord(${c.id})">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function updateRecord(id) {
+            const status = document.getElementById(`status-${id}`).value;
+            const team = document.getElementById(`team-${id}`).value;
+            
+            await fetch('/api/complaints/' + id, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ status, team })
+            });
+            alert('Updated!');
+            loadAdminComplaints();
+        }
+
+        async function deleteRecord(id) {
+            if(confirm('Delete complaint #' + id + '?')) {
+                await fetch('/api/complaints/' + id, { method: 'DELETE' });
+                loadAdminComplaints();
+            }
+        }
+    </script>
+</body>
+</html>

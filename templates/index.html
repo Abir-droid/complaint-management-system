@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complaint System - User Portal</title>
+    <style>
+        * { box-sizing: border-box; font-family: sans-serif; }
+        body { margin: 20px; background: #f0f2f5; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .nav { display: flex; justify-content: space-between; align-items: center; }
+        .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-weight: bold; margin-bottom: 4px; }
+        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #1a73e8; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #1557b0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <h1>User Portal</h1>
+            <a href="/admin"><button style="background:#333;">Admin Portal</button></a>
+        </div>
+
+        <div class="card">
+            <h2>File a New Complaint</h2>
+            <form id="fileForm">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="name" required>
+                </div>
+                
+                <!-- Updated phone input with strict pattern matching (7-15 digits only) -->
+                <div class="form-group">
+                    <label>Phone Number (7-15 digits)</label>
+                    <input 
+                        type="tel" 
+                        id="phone" 
+                        pattern="[0-9]{7,15}" 
+                        placeholder="e.g. 01712345678" 
+                        required 
+                        title="Please enter a valid phone number containing only 7 to 15 digits."
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="category">
+                        <option>Electrical</option>
+                        <option>Plumbing</option>
+                        <option>IT Support</option>
+                        <option>Maintenance</option>
+                        <option>Security</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="description" rows="3" required></textarea>
+                </div>
+                
+                <button type="submit">Submit Complaint</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Check Complaint Status</h2>
+            <div style="display:flex; gap:10px;">
+                <input type="number" id="searchId" placeholder="Enter Complaint ID">
+                <button onclick="checkStatus()">Search</button>
+            </div>
+            <div id="statusResult" style="margin-top:15px;"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('fileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const payload = {
+                name: document.getElementById('name').value,
+                phone: document.getElementById('phone').value,
+                category: document.getElementById('category').value,
+                description: document.getElementById('description').value
+            };
+
+            const res = await fetch('/api/complaints', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            
+            const data = await res.json();
+            
+            if (res.ok) {
+                alert('Complaint Filed! Your ID is: ' + data.id);
+                document.getElementById('fileForm').reset();
+            } else {
+                // Show error message returned from backend validation
+                alert('Error: ' + (data.message || 'Failed to submit complaint.'));
+            }
+        });
+
+        async function checkStatus() {
+            const id = document.getElementById('searchId').value;
+            if(!id) return;
+            
+            const res = await fetch('/api/complaints/' + id);
+            const div = document.getElementById('statusResult');
+            
+            if(res.ok) {
+                const c = await res.json();
+                div.innerHTML = `<p><b>ID #${c.id}</b> | Status: <b>${c.status}</b> | Assigned Team: <b>${c.team}</b></p>`;
+            } else {
+                div.innerHTML = `<p style="color:red;">No complaint found with ID ${id}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Ignore compiled dynamic libraries
+*.dll
+*.so
+*.o
+*.exe
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# (Optional) Ignore local text database if you want a clean start on GitHub
+# complaints.txt
