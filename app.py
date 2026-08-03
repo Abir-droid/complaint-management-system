@@ -3,8 +3,24 @@ import platform
 import subprocess
 from flask import Flask, jsonify, render_template, request
 from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 app = Flask(__name__)
+
+# Set secure session cookies
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-dev-key')
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevents client-side JS from stealing session cookies
+app.config['SESSION_COOKIE_SECURE'] = True    # Enforces HTTPS-only cookies
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' # Helps mitigate CSRF attacks
+
+# Setup Rate Limiter
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"] # Global limit for all routes
+)
 
 # Configure Database URL
 # Uses Render PostgreSQL URL in production, or local SQLite database in development
@@ -61,11 +77,11 @@ def is_valid_phone(phone):
 def index():
     return render_template("index.html")
 
-
-@app.route("/admin")
+# Apply a strict limit specifically on your admin login route
+@limiter.limit("5 per minute")
+@app.route('/admin/login', methods=['GET', 'POST'])
 def admin_page():
     return render_template("admin.html")
-
 
 @app.route("/api/login", methods=["POST"])
 def login():
