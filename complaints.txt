@@ -1,3 +1,0 @@
-1|Md. Abirul Karim|01317972363|Electrical|Current nai|Assigned|Maintenance
-2|badhon|8758375|IT Support|xampp kaj kore na|Assigned|IT Department
-3|Md. Sbirul Karim|01317972363|Electrical|fgfgfgfgfg|Pending|Not Assigned
