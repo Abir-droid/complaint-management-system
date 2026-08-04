@@ -32,10 +32,10 @@ app.config['SESSION_COOKIE_SECURE'] = True    # Enforces HTTPS-only cookies
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' # Helps mitigate CSRF attacks
 
 # Setup Rate Limiter to prevent brute-force attacks
+# Setup Rate Limiter (No default global limits, only specific routes will be limited)
 limiter = Limiter(
     get_remote_address,
-    app=app,
-    default_limits=["200 per day", "50 per hour"] # Global limit for all routes
+    app=app
 )
 
 # ---------------------------------------------------------------------------
