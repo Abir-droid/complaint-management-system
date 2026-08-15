@@ -21,3 +21,4 @@ instance/
 # Ignore legacy txt files (optional)
 complaints.txtbackup_complaints.sql
 complaints.txt
+backup_complaints.sql
