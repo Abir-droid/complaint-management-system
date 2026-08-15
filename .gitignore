@@ -1,24 +1,22 @@
-# Ignore compiled dynamic libraries
+# Python cache
+__pycache__/
+*.pyc
+
+# Local databases & instance folder
+instance/
+*.db
+*.sqlite3
+
+# Ignore SQL backups, DLLs & local logs
+backup_complaints.sql
+complaints.txt
+libcomplaint.dll
 *.dll
 *.so
 *.o
 *.exe
 
-# Ignore Python cache
-__pycache__/
-*.pyc
-
-# (Optional) Ignore local text database if you want a clean start on GitHub
-# complaints.txt
-# Ignore local databases & Flask instance folder
-instance/
-*.db
-*.sqlite3
-
-# Ignore VS Code settings
+# Environment & Editor
+.env
+.venv/
 .vscode/
-
-# Ignore legacy txt files (optional)
-complaints.txtbackup_complaints.sql
-complaints.txt
-backup_complaints.sql
