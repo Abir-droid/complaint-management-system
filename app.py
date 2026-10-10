@@ -50,7 +50,12 @@ if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
 # Auto-append sslmode=require for remote PostgreSQL connections (e.g. Neon)
-if db_url.startswith("postgresql://") and "sslmode=" not in db_url:
+# Bypass this for internal Coolify databases by setting DISABLE_DB_SSL=true
+if (
+    db_url.startswith("postgresql://") 
+    and "sslmode=" not in db_url 
+    and os.environ.get("DISABLE_DB_SSL", "false").lower() != "true"
+):
     delimiter = "&" if "?" in db_url else "?"
     db_url = f"{db_url}{delimiter}sslmode=require"
 
