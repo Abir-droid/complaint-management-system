@@ -8,36 +8,26 @@ from flask_limiter.util import get_remote_address
 # 1. PATH & FLASK INITIALIZATION
 # ---------------------------------------------------------------------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-
+APPLICATION_ROOT = "/complaints"
 app = Flask(
     __name__,
     template_folder=os.path.join(BASE_DIR, "templates"),
 )
+app.config["APPLICATION_ROOT"] = APPLICATION_ROOT
+app.config["SESSION_COOKIE_PATH"] = APPLICATION_ROOT
 
-app_root = os.environ.get("APPLICATION_ROOT", "").strip()
-if app_root:
-    app_root = app_root.strip("/")
-    app_root = f"/{app_root}" if app_root else None
+class PrefixMiddleware:
+    def __init__(self, wsgi_app, prefix):
+        self.wsgi_app = wsgi_app
+        self.prefix = prefix.rstrip("/")
+    def __call__(self, environ, start_response):
+        path = environ.get("PATH_INFO", "")
+        if path == self.prefix or path.startswith(self.prefix + "/"):
+            environ["SCRIPT_NAME"] = self.prefix
+            environ["PATH_INFO"] = path[len(self.prefix):] or "/"
+        return self.wsgi_app(environ, start_response)
 
-app.config["APPLICATION_ROOT"] = app_root or "/"
-if app_root:
-    app.config["SESSION_COOKIE_PATH"] = app_root
-
-    class PrefixMiddleware(object):
-        def __init__(self, wsgi_app, prefix=''):
-            self.wsgi_app = wsgi_app
-            self.prefix = prefix
-
-        def __call__(self, environ, start_response):
-            path_info = environ.get("PATH_INFO", "")
-            if path_info == self.prefix or path_info.startswith(self.prefix + "/"):
-                environ["PATH_INFO"] = path_info[len(self.prefix):]
-                environ["SCRIPT_NAME"] = self.prefix
-                if not environ["PATH_INFO"]:
-                    environ["PATH_INFO"] = "/"
-            return self.wsgi_app(environ, start_response)
-    
-    app.wsgi_app = PrefixMiddleware(app.wsgi_app, prefix=app_root)
+app.wsgi_app = PrefixMiddleware(app.wsgi_app, APPLICATION_ROOT)
 
 # ---------------------------------------------------------------------------
 # 2. SECURITY & CONFIGURATION
