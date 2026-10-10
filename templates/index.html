@@ -21,7 +21,7 @@
     <div class="container">
         <div class="nav">
             <h1>User Portal</h1>
-            <a href="/admin/login"><button style="background:#333;">Admin Portal</button></a>
+            <a href="{{ url_for('admin_page') }}"><button style="background:#333;">Admin Portal</button></a>
         </div>
 
         <div class="card">
@@ -92,7 +92,7 @@
                 description: document.getElementById('description').value
             };
 
-            const res = await fetch('/api/complaints', {
+            const res = await fetch('{{ url_for("create_complaint") }}', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)
@@ -113,7 +113,7 @@
             const id = document.getElementById('searchId').value;
             if(!id) return;
             
-            const res = await fetch('/api/complaints/' + id);
+            const res = await fetch('{{ url_for("get_complaints") }}/' + id);
             const div = document.getElementById('statusResult');
             
             if(res.ok) {

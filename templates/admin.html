@@ -28,7 +28,7 @@
                 <button type="submit" style="width:100%; background:#007bff; color:white;">Login</button>
             </form>
             <div style="margin-top: 15px; text-align: center;">
-                <a href="/" style="color: #007bff; text-decoration: none; font-size: 14px;">Back</a>
+                <a href="{{ url_for('index') }}" style="color: #007bff; text-decoration: none; font-size: 14px;">Back</a>
             </div>
         </div>
 
@@ -37,7 +37,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h2>Admin Control Panel</h2>
                 <div>
-                    <a href="/"><button style="background:#6c757d; color:white;">User View</button></a>
+                    <a href="{{ url_for('index') }}"><button style="background:#6c757d; color:white;">User View</button></a>
                     <button onclick="logout()" style="background:#dc3545; color:white;">Logout</button>
                 </div>
             </div>
@@ -69,7 +69,7 @@
         }
 
         async function login() {
-            const res = await fetch('/api/login', {
+            const res = await fetch('{{ url_for("login") }}', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
@@ -95,7 +95,7 @@
         }
 
         async function loadAdminComplaints() {
-            const res = await fetch('/api/complaints');
+            const res = await fetch('{{ url_for("get_complaints") }}');
             const data = await res.json();
             const tbody = document.getElementById('complaintTable');
             tbody.innerHTML = '';
@@ -138,7 +138,7 @@
             const status = document.getElementById(`status-${id}`).value;
             const team = document.getElementById(`team-${id}`).value;
             
-            await fetch('/api/complaints/' + id, {
+            await fetch('{{ url_for("get_complaints") }}/' + id, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ status, team })
@@ -149,7 +149,7 @@
 
         async function deleteRecord(id) {
             if(confirm('Delete complaint #' + id + '?')) {
-                await fetch('/api/complaints/' + id, { method: 'DELETE' });
+                await fetch('{{ url_for("get_complaints") }}/' + id, { method: 'DELETE' });
                 loadAdminComplaints();
             }
         }
