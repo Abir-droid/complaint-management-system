@@ -16,6 +16,9 @@ libcomplaint.dll
 *.o
 *.exe
 
+# Server config (managed directly on server)
+Caddyfile
+
 # Environment & Editor
 .env
 .venv/

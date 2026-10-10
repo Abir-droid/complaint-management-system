@@ -1,18 +1,17 @@
 import os
-from flask import Flask, jsonify, render_template, request, session, redirect, url_for, flash
+from flask import Flask, jsonify, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 # ---------------------------------------------------------------------------
-# 1. PATH & FLASK INITIALIZATION (Vercel-Safe Absolute Paths)
+# 1. PATH & FLASK INITIALIZATION
 # ---------------------------------------------------------------------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(
     __name__,
     template_folder=os.path.join(BASE_DIR, "templates"),
-    static_folder=os.path.join(BASE_DIR, "static")
 )
 
 # ---------------------------------------------------------------------------
@@ -29,8 +28,12 @@ ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', '1234')
 
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+# Only enforce Secure cookies when not running locally
+# (browsers reject Secure cookies over plain http://localhost)
+if os.environ.get('FLASK_ENV') != 'development':
+    app.config['SESSION_COOKIE_SECURE'] = True
 
 limiter = Limiter(
     get_remote_address,
@@ -38,7 +41,7 @@ limiter = Limiter(
 )
 
 # ---------------------------------------------------------------------------
-# 3. DATABASE CONFIGURATION (Neon PostgreSQL / Local SQLite)
+# 3. DATABASE CONFIGURATION (PostgreSQL / Local SQLite)
 # ---------------------------------------------------------------------------
 default_sqlite_path = f"sqlite:///{os.path.join(BASE_DIR, 'complaints.db')}"
 db_url = os.environ.get("DATABASE_URL", default_sqlite_path)
@@ -46,14 +49,13 @@ db_url = os.environ.get("DATABASE_URL", default_sqlite_path)
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-# Auto-append sslmode=require for Neon PostgreSQL remote connections
+# Auto-append sslmode=require for remote PostgreSQL connections (e.g. Neon)
 if db_url.startswith("postgresql://") and "sslmode=" not in db_url:
     delimiter = "&" if "?" in db_url else "?"
     db_url = f"{db_url}{delimiter}sslmode=require"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.instance_path = os.path.join(BASE_DIR, "instance")
 
 db = SQLAlchemy(app)
 
@@ -80,9 +82,20 @@ class ComplaintModel(db.Model):
             "team": self.assigned_team,
         }
 
-# Initialize database tables
-with app.app_context():
-    db.create_all()
+# ---------------------------------------------------------------------------
+# Lazy table creation — runs once on the first request.
+# Avoids crashing on Vercel's read-only filesystem when DATABASE_URL is set
+# (SQLite would try to create a file), and avoids import-time side effects
+# that can break serverless cold starts.
+# ---------------------------------------------------------------------------
+_tables_created = False
+
+@app.before_request
+def _ensure_tables():
+    global _tables_created
+    if not _tables_created:
+        db.create_all()
+        _tables_created = True
 
 # Helper function to validate phone (7-15 numeric digits)
 def is_valid_phone(phone):
@@ -97,8 +110,8 @@ def is_valid_phone(phone):
 def index():
     return render_template("index.html")
 
-@limiter.limit("5 per minute", key_func=get_login_rate_limit_key)
 @app.route('/admin/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute", key_func=get_login_rate_limit_key)
 def admin_page():
     return render_template("admin.html")
 
@@ -108,7 +121,7 @@ def admin_page():
 # ---------------------------------------------------------------------------
 
 @app.route("/api/login", methods=["POST"])
-@limiter.limit("5 per minute", key_func=get_login_rate_limit_key)  
+@limiter.limit("5 per minute", key_func=get_login_rate_limit_key)
 def login():
     data = request.json or {}
     username = data.get("username")
@@ -192,4 +205,5 @@ def delete_complaint_route(cid):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", debug=True, port=5000)
+    debug = os.environ.get("FLASK_DEBUG", "1") == "1"
+    app.run(host="0.0.0.0", debug=debug, port=5000)
