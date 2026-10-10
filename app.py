@@ -233,7 +233,6 @@ def delete_complaint_route(cid):
     db.session.commit()
     return jsonify({"status": "success"})
 
-
 if __name__ == "__main__":
     debug = os.environ.get("FLASK_DEBUG", "1") == "1"
     app.run(host="0.0.0.0", debug=debug, port=5000)
