@@ -8,7 +8,11 @@ from flask_limiter.util import get_remote_address
 # 1. PATH & FLASK INITIALIZATION
 # ---------------------------------------------------------------------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-APPLICATION_ROOT = "/complaints"
+
+# Set APPLICATION_ROOT env var on Coolify to "/complaints".
+# Leave it unset (or "/") on Vercel / local dev — no prefix needed.
+APPLICATION_ROOT = os.environ.get("APPLICATION_ROOT", "/").rstrip("/") or "/"
+
 app = Flask(
     __name__,
     template_folder=os.path.join(BASE_DIR, "templates"),
@@ -16,13 +20,14 @@ app = Flask(
 app.config["APPLICATION_ROOT"] = APPLICATION_ROOT
 app.config["SESSION_COOKIE_PATH"] = APPLICATION_ROOT
 
+
 class PrefixMiddleware:
     """Ensure SCRIPT_NAME is always set so that url_for() generates URLs
-    with the /complaints prefix.  This handles two deployment scenarios:
+    with the subpath prefix.  This handles two reverse-proxy scenarios:
 
-    1. The reverse proxy (Coolify / Traefik) forwards the full path
-       including the prefix  →  strip it from PATH_INFO.
-    2. The reverse proxy already strips the prefix before forwarding
+    1. The proxy forwards the full path including the prefix
+       →  strip it from PATH_INFO.
+    2. The proxy already strips the prefix before forwarding
        →  PATH_INFO is already relative; just set SCRIPT_NAME.
     """
     def __init__(self, wsgi_app, prefix):
@@ -32,13 +37,16 @@ class PrefixMiddleware:
     def __call__(self, environ, start_response):
         path = environ.get("PATH_INFO", "")
         if path == self.prefix or path.startswith(self.prefix + "/"):
-            # Scenario 1: proxy kept the prefix — strip it
+            # Proxy kept the prefix — strip it
             environ["PATH_INFO"] = path[len(self.prefix):] or "/"
         # Always advertise the prefix so url_for() includes it
         environ["SCRIPT_NAME"] = self.prefix
         return self.wsgi_app(environ, start_response)
 
-app.wsgi_app = PrefixMiddleware(app.wsgi_app, APPLICATION_ROOT)
+
+# Only apply the prefix middleware when running under a subpath
+if APPLICATION_ROOT != "/":
+    app.wsgi_app = PrefixMiddleware(app.wsgi_app, APPLICATION_ROOT)
 
 # ---------------------------------------------------------------------------
 # 2. SECURITY & CONFIGURATION

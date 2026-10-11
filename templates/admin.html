@@ -55,6 +55,9 @@
     </div>
 
     <script>
+        // Dynamic base path — works on both Vercel (/) and Coolify (/complaints/)
+        const API_BASE = "{{ url_for('index') }}".replace(/\/+$/, "");
+
         // Check session on page load
         window.onload = function() {
             if (sessionStorage.getItem('isLoggedIn') === 'true') {
@@ -69,7 +72,7 @@
         }
 
         async function login() {
-            const res = await fetch('/complaints/api/login', {
+            const res = await fetch(API_BASE + '/api/login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
@@ -95,7 +98,7 @@
         }
 
         async function loadAdminComplaints() {
-            const res = await fetch('/complaints/api/complaints');
+            const res = await fetch(API_BASE + '/api/complaints');
             const data = await res.json();
             const tbody = document.getElementById('complaintTable');
             tbody.innerHTML = '';
@@ -138,7 +141,7 @@
             const status = document.getElementById(`status-${id}`).value;
             const team = document.getElementById(`team-${id}`).value;
             
-            await fetch('/complaints/api/complaints/' + id, {
+            await fetch(API_BASE + '/api/complaints/' + id, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ status, team })
@@ -149,7 +152,7 @@
 
         async function deleteRecord(id) {
             if(confirm('Delete complaint #' + id + '?')) {
-                await fetch('/complaints/api/complaints/' + id, { method: 'DELETE' });
+                await fetch(API_BASE + '/api/complaints/' + id, { method: 'DELETE' });
                 loadAdminComplaints();
             }
         }
