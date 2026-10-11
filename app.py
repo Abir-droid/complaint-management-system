@@ -17,14 +17,25 @@ app.config["APPLICATION_ROOT"] = APPLICATION_ROOT
 app.config["SESSION_COOKIE_PATH"] = APPLICATION_ROOT
 
 class PrefixMiddleware:
+    """Ensure SCRIPT_NAME is always set so that url_for() generates URLs
+    with the /complaints prefix.  This handles two deployment scenarios:
+
+    1. The reverse proxy (Coolify / Traefik) forwards the full path
+       including the prefix  →  strip it from PATH_INFO.
+    2. The reverse proxy already strips the prefix before forwarding
+       →  PATH_INFO is already relative; just set SCRIPT_NAME.
+    """
     def __init__(self, wsgi_app, prefix):
         self.wsgi_app = wsgi_app
         self.prefix = prefix.rstrip("/")
+
     def __call__(self, environ, start_response):
         path = environ.get("PATH_INFO", "")
         if path == self.prefix or path.startswith(self.prefix + "/"):
-            environ["SCRIPT_NAME"] = self.prefix
+            # Scenario 1: proxy kept the prefix — strip it
             environ["PATH_INFO"] = path[len(self.prefix):] or "/"
+        # Always advertise the prefix so url_for() includes it
+        environ["SCRIPT_NAME"] = self.prefix
         return self.wsgi_app(environ, start_response)
 
 app.wsgi_app = PrefixMiddleware(app.wsgi_app, APPLICATION_ROOT)
