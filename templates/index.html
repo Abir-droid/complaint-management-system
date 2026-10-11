@@ -92,7 +92,7 @@
                 description: document.getElementById('description').value
             };
 
-            const res = await fetch('{{ url_for("create_complaint") }}', {
+            const res = await fetch('/complaints/api/complaints', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)
@@ -113,7 +113,7 @@
             const id = document.getElementById('searchId').value;
             if(!id) return;
             
-            const res = await fetch('{{ url_for("get_complaints") }}/' + id);
+            const res = await fetch('/complaints/api/complaints/' + id);
             const div = document.getElementById('statusResult');
             
             if(res.ok) {
